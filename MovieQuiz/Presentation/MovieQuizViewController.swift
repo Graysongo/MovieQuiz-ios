@@ -8,6 +8,11 @@ final class MovieQuizViewController: UIViewController {
 }
 
 /*
+ Программно создать label с нужным шрифтом
+ label.font = UIFont(name: "YSDisplay-Medium", size: 12)
+ */
+
+/*
  Mock-данные
  
  
