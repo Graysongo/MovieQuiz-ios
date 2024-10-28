@@ -119,6 +119,8 @@
                         </constraints>
                     </view>
                     <connections>
+                        <outlet property="buttonNo" destination="HSI-hw-lKF" id="41x-6N-UXY"/>
+                        <outlet property="buttonYes" destination="rGW-Jj-ftu" id="ebM-4E-7B0"/>
                         <outlet property="counterLabel" destination="Ohf-mZ-gXq" id="73q-9a-VRS"/>
                         <outlet property="imageView" destination="Vbc-cj-ezM" id="2ss-wT-8MR"/>
                         <outlet property="textLabel" destination="zXT-7m-6My" id="wjK-HZ-r7M"/>

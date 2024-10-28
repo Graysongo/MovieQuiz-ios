@@ -2,34 +2,46 @@ import UIKit
 
 final class MovieQuizViewController: UIViewController {
     
-    private var currentQuestionIndex = 0            // Переменная с индексом текущего вопроса, начальное значение 0
-    private var correctAnswers = 0                  // Переменная со счётчиком правильных ответов, начальное значение закономерно 0
+    // Делаем статус-бар белым как в макете
+    override var preferredStatusBarStyle: UIStatusBarStyle {
+        return .lightContent
+    }
     
-    struct ViewModel {                              // Структура для Модели просмотра
+    // Переменная с индексом текущего вопроса, начальное значение 0
+    private var currentQuestionIndex = 0
+    // Переменная со счётчиком правильных ответов, начальное значение закономерно 0
+    private var correctAnswers = 0
+    
+    // Структура для Модели просмотра
+    struct ViewModel {
         let image: UIImage
         let question: String
         let questionNumber: String
     }
     
-    struct QuizStepViewModel {                      // Структура для состояния "Вопрос показан"
+    // Структура для состояния "Вопрос показан"
+    struct QuizStepViewModel {
         let image: UIImage
         let question: String
         let questionNumber: String
     }
     
-    struct QuizResultsViewModel {                   // Структура для состояния "Результат квиза"
+    // Структура для состояния "Результат квиза"
+    struct QuizResultsViewModel {
         let title: String
         let text: String
         let buttonText: String
     }
     
-    struct QuizQuestion {                           // Структура для вопроса
+    // Структура для вопроса
+    struct QuizQuestion {
         let image: String
         let text: String
         let correctAnswer: Bool
     }
     
-    private let questions: [QuizQuestion] = [       // Массив данных для вопросов
+    // Массив данных для вопросов
+    private let questions: [QuizQuestion] = [
         QuizQuestion(image: "The Godfather",    text: "Рейтинг этого фильма больше чем 6?", correctAnswer: true),
         QuizQuestion(image: "The Dark Knight",  text: "Рейтинг этого фильма больше чем 6?", correctAnswer: true),
         QuizQuestion(image: "Kill Bill",        text: "Рейтинг этого фильма больше чем 6?", correctAnswer: true),
@@ -45,12 +57,20 @@ final class MovieQuizViewController: UIViewController {
     @IBOutlet weak private var imageView: UIImageView!
     @IBOutlet weak private var textLabel: UILabel!
     @IBOutlet weak private var counterLabel: UILabel!
+    @IBOutlet weak var buttonYes: UIButton!
+    @IBOutlet weak var buttonNo: UIButton!
     
-    private func showAnswerResult(isCorrect: Bool) {    //Метод, который обрабатывает результат ответа
+    //Метод, который обрабатывает результат ответа
+    private func showAnswerResult(isCorrect: Bool) {
         if isCorrect {
             correctAnswers += 1
         }
         
+        // Отключаем кнопки на время ожидания
+        buttonNo.isEnabled = false
+        buttonYes.isEnabled = false
+        
+        // Меняем настройки контура на выделенные
         imageView.layer.borderWidth = 8
         imageView.layer.borderColor = isCorrect ? UIColor.ypGreen.cgColor : UIColor.ypRed.cgColor
         imageView.layer.masksToBounds = true
@@ -60,17 +80,20 @@ final class MovieQuizViewController: UIViewController {
         }
     }
     
-    @IBAction private func yesButtonClicked(_ sender: Any) {    //Обработчик нажатия кнопки Да
+    //Обработчик нажатия кнопки Да
+    @IBAction private func yesButtonClicked(_ sender: Any) {
         showAnswerResult(isCorrect: true==questions[currentQuestionIndex].correctAnswer)
         show(quiz: convert(model: questions[currentQuestionIndex]))
     }
     
-    @IBAction private func noButtonClicked(_ sender: Any) {     //Обработчик нажатия кнопки Нет
+    //Обработчик нажатия кнопки Нет
+    @IBAction private func noButtonClicked(_ sender: Any) {
         showAnswerResult(isCorrect: false==questions[currentQuestionIndex].correctAnswer)
         show(quiz: convert(model: questions[currentQuestionIndex]))
     }
     
-    private func convert(model: QuizQuestion) -> QuizStepViewModel {        // Метод конвертации, возвращает модель просмотра
+    // Метод конвертации, возвращает модель просмотра
+    private func convert(model: QuizQuestion) -> QuizStepViewModel {
         let questionStep = QuizStepViewModel(
             image: UIImage(named: model.image) ?? UIImage(),
             question: model.text,
@@ -78,31 +101,38 @@ final class MovieQuizViewController: UIViewController {
         return questionStep
     }
     
-    private func show(quiz step: QuizStepViewModel) {   // Метод вывода на экран вопроса
+    // Метод вывода на экран вопроса
+    private func show(quiz step: QuizStepViewModel) {
         imageView.image = step.image
         textLabel.text = step.question
         counterLabel.text = step.questionNumber
     }
     
-    private func showNextQuestionOrResults() {          // Метод показывающий следующий вопрос или результы
+    // Метод показывающий следующий вопрос или результы
+    private func showNextQuestionOrResults() {
         if currentQuestionIndex == questions.count - 1 {
-            let text = "Ваш результат: \(correctAnswers)/10" // 1
-            let viewModel = QuizResultsViewModel( // 2
+            let text = "Ваш результат: \(correctAnswers)/10"
+            let viewModel = QuizResultsViewModel(
                 title: "Этот раунд окончен!",
                 text: text,
                 buttonText: "Сыграть ещё раз")
-            show(quiz: viewModel) // 3
+            show(quiz: viewModel)
         } else {
             currentQuestionIndex += 1
             let nextQuestion = questions[currentQuestionIndex]
             let viewModel = convert(model: nextQuestion)
             show(quiz: viewModel)
         }
+        //Возвращаем настройки контура в дефолтные
         imageView.layer.borderWidth = 0
         imageView.layer.borderColor = nil
+        // Включаем кнопки посе ожидания
+        buttonNo.isEnabled = true
+        buttonYes.isEnabled = true
     }
     
-    private func show(quiz result: QuizResultsViewModel) { // Метод показывает результаты
+    // Метод показывает результаты
+    private func show(quiz result: QuizResultsViewModel) {
         let alert = UIAlertController(
             title: result.title,
             message: result.text,
