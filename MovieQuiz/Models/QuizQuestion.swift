@@ -7,7 +7,7 @@
 
 import Foundation
 
-// Структура для вопроса
+// Структура для вопроса викторины
 struct QuizQuestion {
     let image: String
     let text: String

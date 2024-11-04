@@ -1,15 +1,16 @@
 import UIKit
 
-class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
+class MovieQuizViewController: UIViewController, QuestionFactoryDelegate, AlertPresenterDelegate {
     
     // Делаем статус-бар белым как в макете
     override var preferredStatusBarStyle: UIStatusBarStyle {
         return .lightContent
     }
-    
+    // Переменная DateFormatter для маскирования вывода даты
+    let dateFormatter = DateFormatter()
     // Переменная с индексом текущего вопроса, начальное значение 0
     private var currentQuestionIndex = 0
-    // Переменная со счётчиком правильных ответов, начальное значение закономерно 0
+    // Переменная со счётчиком правильных ответов, начальное значение 0
     private var correctAnswers = 0
     // Переменная с кол-вом вопросов в квизе
     private let questionsAmount: Int = 10
@@ -17,6 +18,10 @@ class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     private var questionFactory: QuestionFactoryProtocol = QuestionFactory()
     // Переменная с номером текущего вопроса
     private var currentQuestion: QuizQuestion?
+    // Переменная с Алертом
+    private var alertPresenter: AlertPresenter?
+    // Переменная с сервисом статистики
+    private let statisticService: StatisticServiceProtocol = StatisticService()
     
     // Структура для Модели просмотра
     struct ViewModel {
@@ -50,28 +55,6 @@ class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         counterLabel.text = step.questionNumber
     }
     
-    // Метод отображает результаты викторины
-    private func show(quiz result: QuizResultsViewModel) {
-        // Создаем alert с результатами раунда
-        let alert = UIAlertController(
-            title: result.title,
-            message: result.text,
-            preferredStyle: .alert)
-        // Создаем action c для подготовки начала новой игры
-        let action = UIAlertAction(title: result.buttonText, style: .default) {  [weak self] _ in
-            guard let self = self else { return }
-            // Сбрасываем индекс и счетчик правильных ответов
-            self.currentQuestionIndex = 0
-            self.correctAnswers = 0
-            // Запрашиваем следующий вопрос для начала новой игры
-            questionFactory.requestNextQuestion()
-        }
-        // Добавляем action в alert
-        alert.addAction(action)
-        // Показываем результаты и предлагаем начать новую игру
-        self.present(alert, animated: true, completion: nil)
-    }
-    
     //Метод отображает верно ли нажата кнопка и меняет контур imageView соответствующе
     private func showAnswerResult(isCorrect: Bool) {
         // Увеличиваем счетчик верных ответов если кнопка нажата верно
@@ -92,21 +75,31 @@ class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         }
     }
     
-    // Метод отвечает за переход к следующему вопросу или отображение результата, если он был последним
+    // Метод отвечает за переход к следующему вопросу или отображение результата, если вопрос был последним
     private func showNextQuestionOrResults() {
         // Проверяем достигли ли мы последнего вопроса
         if currentQuestionIndex == questionsAmount - 1 {
-            // Если угадано 10 из 10, задаем специальное сообщение, иначе указываем кол-во правильных ответов
-            let text = correctAnswers == questionsAmount ?
-                    "Поздравляем, вы ответили на 10 из 10!" :
-                    "Вы ответили на \(correctAnswers) из 10, попробуйте ещё раз!"
-            // Формируем viewModel с заголовком, текстом и кнопкой
-            let viewModel = QuizResultsViewModel(
+            // Создаем презентор
+            alertPresenter = AlertPresenter(delegate: self)
+            // Обновление статистики с использованием statisticService
+            statisticService.store(correct: correctAnswers, total: questionsAmount)
+            // Формируем тест алерта в соотвествии с шаблоном
+            let text = "Ваш результат: \(correctAnswers)/\(questionsAmount) \n Количество сыгранных квизов: \(statisticService.gamesCount) \n Рекорд: \(statisticService.bestGame.correct)/\(statisticService.bestGame.total) (\(dateFormatter.string(from: statisticService.bestGame.date))) \n Средняя точность: \(String(format: "%.2f", statisticService.totalAccuracy))%"
+            // Формируем alertModel с заголовком, текстом и кнопкой
+            let alertModel = AlertModel(
                 title: "Этот раунд окончен!",
-                text: text,
-                buttonText: "Сыграть ещё раз")
-            // Вызываем метод show с result для отображения результатов
-            show(quiz: viewModel)
+                message: text,
+                buttonText: "Сыграть ещё раз",
+                completion: {
+                    // Сбрасываем индекс и счетчик правильных ответов
+                    self.currentQuestionIndex = 0
+                    self.correctAnswers = 0
+                    // Запрашиваем следующий вопрос для начала новой игры
+                    self.questionFactory.requestNextQuestion()
+                }
+            )
+            // Передаем информацию в для отображения алерта.
+            alertPresenter?.showAlert(with: alertModel)
         // Если вопрос не последний, переходим к следующему вопросу
         } else {
             currentQuestionIndex += 1
@@ -144,8 +137,10 @@ class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         // Инициализируем начальные значения индекса и кол-ва верных ответов
         currentQuestionIndex = 0
         correctAnswers = 0
+        // Устанавливаем маску дата:время для вывода в алерте
+        dateFormatter.dateFormat = "dd.MM.yy HH:mm"
         //  Создаем Фабрику вопросов
-        var questionFactory = QuestionFactory()
+        let questionFactory = QuestionFactory()
         // Настраиваем делегата для Фабрики вопросов
         questionFactory.setup(delegate: self)
         // Присваиваем экземпляр фабрики вопросов свойству self.questionFactory для использования в других методах
@@ -155,7 +150,7 @@ class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     }
     
     // MARK: - QuestionFactoryDelegate
-
+    
     // Метод обеспечивает плавный переход к следующему вопросу и обновляет интерфейс для отображения этого вопроса.
     func didReceiveNextQuestion(question: QuizQuestion?) {
         // Проверяем предоставила ли фабрика вопрос, если да сохраняем его в currentQuestion
@@ -171,4 +166,8 @@ class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         }
     }
     
+    // Показ алерта
+    func presentAlert(_ alert: UIAlertController) {
+        self.present(alert, animated: true, completion: nil)
+    }
 }

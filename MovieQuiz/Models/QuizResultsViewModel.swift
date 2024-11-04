@@ -7,7 +7,7 @@
 
 import Foundation
 
-// Структура для состояния "Результат квиза"
+// Структура для состояния "Результат викторины"
 struct QuizResultsViewModel {
     let title: String
     let text: String
