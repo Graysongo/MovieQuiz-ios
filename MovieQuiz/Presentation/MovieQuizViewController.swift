@@ -2,7 +2,7 @@ import UIKit
 
 class MovieQuizViewController: UIViewController, QuestionFactoryDelegate, AlertPresenterDelegate {
     
-    // Делаем статус-бар белым как в макете
+    // Делаем статус-бар белым
     override var preferredStatusBarStyle: UIStatusBarStyle {
         return .lightContent
     }
