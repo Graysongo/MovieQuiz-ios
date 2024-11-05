@@ -7,7 +7,7 @@
 
 import UIKit
 
-class AlertPresenter {
+final class AlertPresenter {
     // Делегат для передачи окна алерта
     weak var delegate: AlertPresenterDelegate?
     
