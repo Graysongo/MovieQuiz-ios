@@ -1,3 +1,5 @@
+// Обновление 5.0 со всеми комментариями
+
 import UIKit
 
 final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate, AlertPresenterDelegate {
