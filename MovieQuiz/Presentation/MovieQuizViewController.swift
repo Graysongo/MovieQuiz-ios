@@ -1,7 +1,6 @@
 import UIKit
 
 final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate, AlertPresenterDelegate {
-    
     // Делаем статус-бар белым
     override var preferredStatusBarStyle: UIStatusBarStyle {
         return .lightContent
@@ -15,13 +14,13 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate, 
     // Переменная с кол-вом вопросов в квизе
     private let questionsAmount: Int = 10
     // Переменная с фабрикой вопросов выдающей рандомный вопрос
-    private var questionFactory: QuestionFactoryProtocol = QuestionFactory()
+    private var questionFactory: QuestionFactoryProtocol?
     // Переменная с номером текущего вопроса
     private var currentQuestion: QuizQuestion?
     // Переменная с Алертом
     private var alertPresenter: AlertPresenter?
     // Переменная с сервисом статистики
-    private let statisticService: StatisticServiceProtocol = StatisticService()
+    private var statisticService: StatisticServiceProtocol = StatisticService()
     
     // Структура для Модели просмотра
     struct ViewModel {
@@ -30,18 +29,40 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate, 
         let questionNumber: String
     }
     
+    @IBOutlet weak var questionTitleLabel: UILabel!
+    @IBOutlet weak var activityIndicator: UIActivityIndicatorView!
     @IBOutlet weak private var imageView: UIImageView!
     @IBOutlet weak private var textLabel: UILabel!
     @IBOutlet weak private var counterLabel: UILabel!
     @IBOutlet weak var buttonYes: UIButton!
     @IBOutlet weak var buttonNo: UIButton!
     
+    // Методо конвертации модели фильма для отображения
     private func convert(model: QuizQuestion) -> QuizStepViewModel {
-        let questionStep = QuizStepViewModel(
-            image: UIImage(named: model.image) ?? UIImage(),
+        return QuizStepViewModel(
+            image: UIImage(data: model.image) ?? UIImage(),
             question: model.text,
             questionNumber: "\(currentQuestionIndex + 1)/\(questionsAmount)")
-        return questionStep
+    }
+    
+    // Метод который в случае ошибки загрузки показывает алерт
+    private func showNetworkError(message: String) {
+        hideLoadingIndicator()
+        alertPresenter = AlertPresenter(delegate: self)
+        let alertModel = AlertModel(title: "Ошибка",
+                                    message: message,
+                                    buttonText: "Попробовать еще раз") { [weak self] in
+            guard let self = self else { return }
+            DispatchQueue.main.async {
+                self.showLoadingIndicator()
+                self.currentQuestionIndex = 0
+                self.correctAnswers = 0
+                self.questionFactory?.loadData()
+            }
+        }
+        DispatchQueue.main.async {
+            self.alertPresenter?.showAlert(with: alertModel)
+        }
     }
     
     // Метод отображает текущий вопрос викторины
@@ -73,6 +94,8 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate, 
     
     // Метод отвечает за переход к следующему вопросу или отображение результата, если вопрос был последним
     private func showNextQuestionOrResults() {
+        // Устанавливаем формат даты для алерта
+        dateFormatter.dateFormat = "dd.MM.yy HH:mm"
         // Проверяем достигли ли мы последнего вопроса
         if currentQuestionIndex == questionsAmount - 1 {
             alertPresenter = AlertPresenter(delegate: self)
@@ -88,14 +111,14 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate, 
                     self.currentQuestionIndex = 0
                     self.correctAnswers = 0
                     // Запрашиваем следующий вопрос для начала новой игры
-                    self.questionFactory.requestNextQuestion()
+                    self.questionFactory?.requestNextQuestion()
                 }
             )
             alertPresenter?.showAlert(with: alertModel)
             // Если вопрос не последний, переходим к следующему вопросу
         } else {
             currentQuestionIndex += 1
-            self.questionFactory.requestNextQuestion()
+            self.questionFactory?.requestNextQuestion()
         }
         //Возвращаем настройки контура в настройки по умолчанию (мы меняли рамку после нажатия кнопки)
         imageView.layer.borderWidth = 0
@@ -123,19 +146,24 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate, 
         show(quiz: convert(model: currentQuestion))
     }
     
-    // Метод загрузки UIViewController
     override func viewDidLoad() {
         super.viewDidLoad()
+        
         // Инициализируем начальные значения индекса и кол-ва верных ответов
         currentQuestionIndex = 0
         correctAnswers = 0
-        // Устанавливаем маску дата:время для вывода в алерте
-        dateFormatter.dateFormat = "dd.MM.yy HH:mm"
-        let questionFactory = QuestionFactory()
-        questionFactory.setup(delegate: self)
-        self.questionFactory = questionFactory
-        // Запрашиваем первый вопрос
-        questionFactory.requestNextQuestion()
+        
+        /* код для очистки UserDefaults, на будущее для тестов
+         if let appDomain = Bundle.main.bundleIdentifier {
+         UserDefaults.standard.removePersistentDomain(forName: appDomain)
+         UserDefaults.standard.synchronize()
+         }
+         */
+        questionFactory = QuestionFactory(moviesLoader: MoviesLoader(), delegate: self)
+        statisticService = StatisticService()
+        
+        showLoadingIndicator()
+        questionFactory?.loadData()
     }
     
     // MARK: - QuestionFactoryDelegate
@@ -153,6 +181,34 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate, 
         }
     }
     
+    // Метод делающий индикатор загрузки видимым
+    private func showLoadingIndicator() {
+        DispatchQueue.main.async {
+            self.activityIndicator.isHidden = false
+            self.activityIndicator.startAnimating()
+        }
+    }
+    
+    // Метод делающий индикатор загрузки скрытым
+    private func hideLoadingIndicator() {
+        DispatchQueue.main.async {
+            self.activityIndicator.isHidden = true
+            self.activityIndicator.stopAnimating()
+        }
+    }
+    
+    // Метод запуска викторины если данные загрузились
+    func didLoadDataFromServer() {
+        activityIndicator.isHidden = true // скрываем индикатор загрузки
+        questionFactory?.requestNextQuestion()
+    }
+    
+    // Метод отображающий ошибку если данные для викторины не загрузились
+    func didFailToLoadData(with error: Error) {
+        showNetworkError(message: error.localizedDescription) // возьмём в качестве сообщения описание ошибки
+    }
+    
+    // Метод для отображения алерта
     func presentAlert(_ alert: UIAlertController) {
         self.present(alert, animated: true, completion: nil)
     }
