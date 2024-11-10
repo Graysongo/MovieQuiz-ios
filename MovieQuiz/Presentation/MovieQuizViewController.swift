@@ -31,13 +31,13 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate, 
         let questionNumber: String
     }
     
-    @IBOutlet weak var questionTitleLabel: UILabel!
-    @IBOutlet weak var activityIndicator: UIActivityIndicatorView!
+    @IBOutlet weak private var questionTitleLabel: UILabel!
+    @IBOutlet weak private var activityIndicator: UIActivityIndicatorView!
     @IBOutlet weak private var imageView: UIImageView!
     @IBOutlet weak private var textLabel: UILabel!
     @IBOutlet weak private var counterLabel: UILabel!
-    @IBOutlet weak var buttonYes: UIButton!
-    @IBOutlet weak var buttonNo: UIButton!
+    @IBOutlet weak private var buttonYes: UIButton!
+    @IBOutlet weak private var buttonNo: UIButton!
     
     // Методо конвертации модели фильма для отображения
     private func convert(model: QuizQuestion) -> QuizStepViewModel {
@@ -55,16 +55,12 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate, 
                                     message: message,
                                     buttonText: "Попробовать еще раз") { [weak self] in
             guard let self = self else { return }
-            DispatchQueue.main.async {
-                self.showLoadingIndicator()
-                self.currentQuestionIndex = 0
-                self.correctAnswers = 0
-                self.questionFactory?.loadData()
-            }
+            self.showLoadingIndicator()
+            self.currentQuestionIndex = 0
+            self.correctAnswers = 0
+            self.questionFactory?.loadData()
         }
-        DispatchQueue.main.async {
-            self.alertPresenter?.showAlert(with: alertModel)
-        }
+        alertPresenter?.showAlert(with: alertModel)
     }
     
     // Метод отображает текущий вопрос викторины
@@ -185,18 +181,14 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate, 
     
     // Метод делающий индикатор загрузки видимым
     private func showLoadingIndicator() {
-        DispatchQueue.main.async {
-            self.activityIndicator.isHidden = false
-            self.activityIndicator.startAnimating()
-        }
+            activityIndicator.isHidden = false
+            activityIndicator.startAnimating()
     }
     
     // Метод делающий индикатор загрузки скрытым
     private func hideLoadingIndicator() {
-        DispatchQueue.main.async {
-            self.activityIndicator.isHidden = true
-            self.activityIndicator.stopAnimating()
-        }
+            activityIndicator.isHidden = true
+            activityIndicator.stopAnimating()
     }
     
     // Метод запуска викторины если данные загрузились
