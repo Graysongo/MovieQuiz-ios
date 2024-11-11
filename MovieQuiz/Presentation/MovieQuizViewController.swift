@@ -9,12 +9,11 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate, 
     }
     // Переменная DateFormatter для маскирования вывода даты
     let dateFormatter = DateFormatter()
-    // Переменная с индексом текущего вопроса, начальное значение 0
-    private var currentQuestionIndex = 0
+
     // Переменная со счётчиком правильных ответов, начальное значение 0
     private var correctAnswers = 0
-    // Переменная с кол-вом вопросов в квизе
-    private let questionsAmount: Int = 10
+    
+    private let presenter = MovieQuizPresenter()
     // Переменная с фабрикой вопросов выдающей рандомный вопрос
     private var questionFactory: QuestionFactoryProtocol?
     // Переменная с номером текущего вопроса
@@ -39,13 +38,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate, 
     @IBOutlet weak private var buttonYes: UIButton!
     @IBOutlet weak private var buttonNo: UIButton!
     
-    // Методо конвертации модели фильма для отображения
-    private func convert(model: QuizQuestion) -> QuizStepViewModel {
-        return QuizStepViewModel(
-            image: UIImage(data: model.image) ?? UIImage(),
-            question: model.text,
-            questionNumber: "\(currentQuestionIndex + 1)/\(questionsAmount)")
-    }
+
     
     // Метод который в случае ошибки загрузки показывает алерт
     private func showNetworkError(message: String) {
@@ -56,7 +49,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate, 
                                     buttonText: "Попробовать еще раз") { [weak self] in
             guard let self = self else { return }
             self.showLoadingIndicator()
-            self.currentQuestionIndex = 0
+            self.presenter.resetQuestionIndex()
             self.correctAnswers = 0
             self.questionFactory?.loadData()
         }
@@ -95,10 +88,10 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate, 
         // Устанавливаем формат даты для алерта
         dateFormatter.dateFormat = "dd.MM.yy HH:mm"
         // Проверяем достигли ли мы последнего вопроса
-        if currentQuestionIndex == questionsAmount - 1 {
+        if presenter.isLastQuestion() {
             alertPresenter = AlertPresenter(delegate: self)
-            statisticService.store(correct: correctAnswers, total: questionsAmount)
-            let text = "Ваш результат: \(correctAnswers)/\(questionsAmount) \n Количество сыгранных квизов: \(statisticService.gamesCount) \n Рекорд: \(statisticService.bestGame.correct)/\(statisticService.bestGame.total) (\(dateFormatter.string(from: statisticService.bestGame.date))) \n Средняя точность: \(String(format: "%.2f", statisticService.totalAccuracy))%"
+            statisticService.store(correct: correctAnswers, total: presenter.questionsAmount)
+            let text = "Ваш результат: \(correctAnswers)/\(presenter.questionsAmount) \n Количество сыгранных квизов: \(statisticService.gamesCount) \n Рекорд: \(statisticService.bestGame.correct)/\(statisticService.bestGame.total) (\(dateFormatter.string(from: statisticService.bestGame.date))) \n Средняя точность: \(String(format: "%.2f", statisticService.totalAccuracy))%"
             let alertModel = AlertModel(
                 title: "Этот раунд окончен!",
                 message: text,
@@ -106,7 +99,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate, 
                 completion: { [weak self] in
                     guard let self = self else { return }
                     // Сбрасываем индекс и счетчик правильных ответов
-                    self.currentQuestionIndex = 0
+                    self.presenter.resetQuestionIndex()
                     self.correctAnswers = 0
                     // Запрашиваем следующий вопрос для начала новой игры
                     self.questionFactory?.requestNextQuestion()
@@ -115,7 +108,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate, 
             alertPresenter?.showAlert(with: alertModel)
             // Если вопрос не последний, переходим к следующему вопросу
         } else {
-            currentQuestionIndex += 1
+            presenter.switchToNextQuestion()
             self.questionFactory?.requestNextQuestion()
         }
         //Возвращаем настройки контура в настройки по умолчанию (мы меняли рамку после нажатия кнопки)
@@ -132,7 +125,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate, 
             return
         }
         showAnswerResult(isCorrect: true==currentQuestion.correctAnswer)
-        show(quiz: convert(model: currentQuestion))
+        show(quiz: presenter.convert(model: currentQuestion))
     }
     
     //Обработчик нажатия кнопки Нет
@@ -141,14 +134,14 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate, 
             return
         }
         showAnswerResult(isCorrect: false==currentQuestion.correctAnswer)
-        show(quiz: convert(model: currentQuestion))
+        show(quiz: presenter.convert(model: currentQuestion))
     }
     
     override func viewDidLoad() {
         super.viewDidLoad()
         
         // Инициализируем начальные значения индекса и кол-ва верных ответов
-        currentQuestionIndex = 0
+        presenter.resetQuestionIndex()
         correctAnswers = 0
         
         /* код для очистки UserDefaults, на будущее для тестов
@@ -172,7 +165,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate, 
             return
         }
         currentQuestion = question
-        let viewModel = convert(model: question)
+        let viewModel = presenter.convert(model: question)
         // Обновляем интерфейс в главном потоке через show(quiz: ) чтобы отобразить вопрос
         DispatchQueue.main.async { [weak self] in
             self?.show(quiz: viewModel)
