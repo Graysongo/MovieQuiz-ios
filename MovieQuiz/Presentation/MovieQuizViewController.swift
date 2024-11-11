@@ -16,6 +16,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate, 
     private let presenter = MovieQuizPresenter()
     // Переменная с фабрикой вопросов выдающей рандомный вопрос
     private var questionFactory: QuestionFactoryProtocol?
+ 
     // Переменная с номером текущего вопроса
     private var currentQuestion: QuizQuestion?
     // Переменная с Алертом
@@ -64,7 +65,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate, 
     }
     
     //Метод отображает верно ли нажата кнопка и меняет контур imageView соответствующе
-    private func showAnswerResult(isCorrect: Bool) {
+    func showAnswerResult(isCorrect: Bool) {
         // Увеличиваем счетчик верных ответов если кнопка нажата верно
         if isCorrect {
             correctAnswers += 1
@@ -119,26 +120,13 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate, 
         buttonYes.isEnabled = true
     }
     
-    //Обработчик нажатия кнопки Да
-    @IBAction private func yesButtonClicked(_ sender: Any) {
-        guard let currentQuestion = currentQuestion else {
-            return
-        }
-        showAnswerResult(isCorrect: true==currentQuestion.correctAnswer)
-        show(quiz: presenter.convert(model: currentQuestion))
-    }
+
     
-    //Обработчик нажатия кнопки Нет
-    @IBAction private func noButtonClicked(_ sender: Any) {
-        guard let currentQuestion = currentQuestion else {
-            return
-        }
-        showAnswerResult(isCorrect: false==currentQuestion.correctAnswer)
-        show(quiz: presenter.convert(model: currentQuestion))
-    }
+
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        presenter.viewController = self
         
         // Инициализируем начальные значения индекса и кол-ва верных ответов
         presenter.resetQuestionIndex()
@@ -155,6 +143,16 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate, 
         
         showLoadingIndicator()
         questionFactory?.loadData()
+    }
+    
+    @IBAction private func yesButtonClicked(_ sender: UIButton) {
+        presenter.currentQuestion = currentQuestion
+        presenter.yesButtonClicked()
+    }
+    
+    @IBAction private func noButtonClicked(_ sender: UIButton) {
+        presenter.currentQuestion = currentQuestion
+        presenter.noButtonClicked()
     }
     
     // MARK: - QuestionFactoryDelegate
