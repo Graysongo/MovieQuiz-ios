@@ -2,7 +2,35 @@
 
 import UIKit
 
-final class MovieQuizViewController: UIViewController, AlertPresenterDelegate {
+final class MovieQuizViewController: UIViewController, MovieQuizViewControllerProtocol {
+    // Метод подсветки краёв экрана и блокировки кнопок от повторного нажатия
+    func highlightImageBorder(isCorrectAnswer: Bool) {
+        buttonNo.isEnabled = false
+        buttonYes.isEnabled = false
+        imageView.layer.borderWidth = 8
+        imageView.layer.borderColor = isCorrectAnswer ? UIColor.green.cgColor : UIColor.red.cgColor
+        imageView.layer.masksToBounds = true
+    }
+    
+    // Метод делающий индикатор загрузки видимым
+    func showLoadingIndicator() {
+        activityIndicator.isHidden = false
+        activityIndicator.startAnimating()
+    }
+    // Метод делающий индикатор загрузки скрытым
+    func hideLoadingIndicator() {
+        activityIndicator.isHidden = true
+        activityIndicator.stopAnimating()
+    }
+    
+    // Метод возврата настроек краёв экрана в дефолтное состояние и разблокировки кнопок
+    func defaultImageBorder() {
+        imageView.layer.borderWidth = 0
+        imageView.layer.borderColor = nil
+        // Включаем кнопки после ожидания (мы отключали их после нажатия кнопки)
+        buttonNo.isEnabled = true
+        buttonYes.isEnabled = true
+    }
     
     // MARK: - Properties
     
@@ -74,43 +102,23 @@ final class MovieQuizViewController: UIViewController, AlertPresenterDelegate {
         counterLabel.text = step.questionNumber
     }
     
-    // Метод отображает результаты викторины
     func show(quiz result: QuizResultsViewModel) {
-        let model = AlertModel(title: result.title, message: result.text, buttonText: result.buttonText) { [weak self] in
+        let message = presenter.makeResultsMessage()
+        
+        let alert = UIAlertController(
+            title: result.title,
+            message: message,
+            preferredStyle: .alert)
+        
+        let action = UIAlertAction(title: result.buttonText, style: .default) { [weak self] _ in
             guard let self = self else { return }
+            
             self.presenter.restartGame()
         }
-        alertPresenter?.show(in: self, model: model)
-    }
-    
-    // Метод подсветки краёв экрана и блокировки кнопок от повторного нажатия
-    func highlightImageBorder(isCorrectAnswer: Bool) {
-        buttonNo.isEnabled = false
-        buttonYes.isEnabled = false
-        imageView.layer.borderWidth = 8
-        imageView.layer.borderColor = isCorrectAnswer ? UIColor.green.cgColor : UIColor.red.cgColor
-        imageView.layer.masksToBounds = true
-    }
-    
-    // Метод возврата настроек краёв экрана в дефолтное состояние и разблокировки кнопок
-    func defaultImageBorder() {
-        imageView.layer.borderWidth = 0
-        imageView.layer.borderColor = nil
-        // Включаем кнопки после ожидания (мы отключали их после нажатия кнопки)
-        buttonNo.isEnabled = true
-        buttonYes.isEnabled = true
-    }
-    
-    // Метод делающий индикатор загрузки видимым
-    func showLoadingIndicator() {
-        activityIndicator.isHidden = false
-        activityIndicator.startAnimating()
-    }
-    
-    // Метод делающий индикатор загрузки скрытым
-    func hideLoadingIndicator() {
-        activityIndicator.isHidden = true
-        activityIndicator.stopAnimating()
+        
+        alert.addAction(action)
+        
+        self.present(alert, animated: true, completion: nil)
     }
     
     // Метод для отображения алерта

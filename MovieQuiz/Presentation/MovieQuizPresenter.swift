@@ -8,12 +8,12 @@
 import UIKit
 
 final class MovieQuizPresenter: QuestionFactoryDelegate {
-    
+  
     // MARK: - Properties
     
     private let statisticService: StatisticServiceProtocol
     private var questionFactory: QuestionFactoryProtocol?
-    private weak var viewController: MovieQuizViewController?
+    private weak var viewController: MovieQuizViewControllerProtocol?
     // Переменная со счётчиком правильных ответов
     private var correctAnswers = 0
     // Переменная DateFormatter для маскирования вывода даты
@@ -28,7 +28,7 @@ final class MovieQuizPresenter: QuestionFactoryDelegate {
     
     // MARK: - Initializer
     
-    init(viewController: MovieQuizViewController) {
+    init(viewController: MovieQuizViewControllerProtocol) {
         self.viewController = viewController
         statisticService = StatisticService()
         questionFactory = QuestionFactory(moviesLoader: MoviesLoader(), delegate: self)
@@ -94,6 +94,12 @@ final class MovieQuizPresenter: QuestionFactoryDelegate {
         didAnswer(isYes: false)
     }
     
+    func makeResultsMessage() -> String {
+           statisticService.store(correct: correctAnswers, total: questionsAmount)
+           let resultMessage = "Ваш результат: \(correctAnswers)/\(questionsAmount) \n Количество сыгранных квизов: \(statisticService.gamesCount) \n Рекорд: \(statisticService.bestGame.correct)/\(statisticService.bestGame.total) (\(dateFormatter.string(from: statisticService.bestGame.date))) \n Средняя точность: \(String(format: "%.2f", statisticService.totalAccuracy))%"
+        return resultMessage
+       }
+    
     //Метод отображегния верно ли нажата кнопка и меняет контур imageView соответствующе
     func showAnswerResult(isCorrect: Bool) {
         //presenter.didAnswer(isYes: isCorrect)
@@ -132,28 +138,19 @@ final class MovieQuizPresenter: QuestionFactoryDelegate {
     
     // Метод отвечает за переход к следующему вопросу или отображение результата, если вопрос был последним
     func showNextQuestionOrResults() {
-        if isLastQuestion() {
-            statisticService.store(correct: correctAnswers, total: questionsAmount)
-            let resultText = "Ваш результат: \(correctAnswers)/\(questionsAmount) \n Количество сыгранных квизов: \(statisticService.gamesCount) \n Рекорд: \(statisticService.bestGame.correct)/\(statisticService.bestGame.total) (\(dateFormatter.string(from: statisticService.bestGame.date))) \n Средняя точность: \(String(format: "%.2f", statisticService.totalAccuracy))%"
-            // Создаем модель для алерта
-            let alertModel = AlertModel(
+        if self.isLastQuestion() {
+            let text = "Вы ответили на \(correctAnswers) из 10, попробуйте ещё раз!"
+            
+            let viewModel = QuizResultsViewModel(
                 title: "Этот раунд окончен!",
-                message: resultText,
-                buttonText: "Сыграть ещё раз",
-                completion: { [weak self] in
-                    guard let self = self else { return }
-                    self.restartGame()
-                }
-            )
-            // Безопасное разворачивание viewController перед вызовом show
-            guard let viewController = viewController else { return }
-            viewController.alertPresenter?.show(in: viewController, model: alertModel)
+                text: text,
+                buttonText: "Сыграть ещё раз")
+                viewController?.show(quiz: viewModel)
         } else {
-            // Если вопрос не последний, переходим к следующему вопросу
-            switchToNextQuestion()
+            self.switchToNextQuestion()
             questionFactory?.requestNextQuestion()
         }
     }
-    
+
 }
 
