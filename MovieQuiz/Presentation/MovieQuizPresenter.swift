@@ -75,7 +75,7 @@ final class MovieQuizPresenter: QuestionFactoryDelegate {
     }
     
     // Метод конвертации модели фильма для отображения
-    internal func convert(model: QuizQuestion) -> QuizStepViewModel {
+    func convert(model: QuizQuestion) -> QuizStepViewModel {
         return QuizStepViewModel(
             image: UIImage(data: model.image) ?? UIImage(),
             question: model.text,
@@ -96,21 +96,26 @@ final class MovieQuizPresenter: QuestionFactoryDelegate {
     
     func makeResultsMessage() -> String {
            statisticService.store(correct: correctAnswers, total: questionsAmount)
-           let resultMessage = "Ваш результат: \(correctAnswers)/\(questionsAmount) \n Количество сыгранных квизов: \(statisticService.gamesCount) \n Рекорд: \(statisticService.bestGame.correct)/\(statisticService.bestGame.total) (\(dateFormatter.string(from: statisticService.bestGame.date))) \n Средняя точность: \(String(format: "%.2f", statisticService.totalAccuracy))%"
+           let resultMessage = """
+                Ваш результат: \(correctAnswers)/\(questionsAmount)
+                Количество сыгранных квизов: \(statisticService.gamesCount)
+                Рекорд: \(statisticService.bestGame.correct)/\(statisticService.bestGame.total) (\(dateFormatter.string(from: statisticService.bestGame.date)))
+                Средняя точность: \(String(format: "%.2f", statisticService.totalAccuracy))%
+                """
         return resultMessage
        }
-    
+ 
     //Метод отображегния верно ли нажата кнопка и меняет контур imageView соответствующе
     func showAnswerResult(isCorrect: Bool) {
         //presenter.didAnswer(isYes: isCorrect)
         if (isCorrect) {  correctAnswers += 1 }
         // Отключаем кнопки и меняем настройки контура
-        self.viewController?.highlightImageBorder(isCorrectAnswer: isCorrect)
+        viewController?.highlightImageBorder(isCorrectAnswer: isCorrect)
         // Через паузу вызываем следующий вопрос или окно результатов
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
             guard let self = self else { return }
             showNextQuestionOrResults()
-            self.viewController?.defaultImageBorder()
+            viewController?.defaultImageBorder()
         }
     }
     

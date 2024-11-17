@@ -86,9 +86,7 @@ final class MovieQuizViewController: UIViewController, MovieQuizViewControllerPr
             title: "Ошибка",
             message: message,
             preferredStyle: .alert)
-        let action = UIAlertAction(title: "Попробовать еще раз",
-                                   style: .default) { [weak self] _ in
-            guard let self = self else { return }
+        let action = UIAlertAction(title: "Попробовать еще раз", style: .default) { _ in
             self.presenter.restartGame()
         }
         alert.addAction(action)
@@ -110,14 +108,11 @@ final class MovieQuizViewController: UIViewController, MovieQuizViewControllerPr
             message: message,
             preferredStyle: .alert)
         
-        let action = UIAlertAction(title: result.buttonText, style: .default) { [weak self] _ in
-            guard let self = self else { return }
-            
+        let action = UIAlertAction(title: result.buttonText, style: .default) {_ in
             self.presenter.restartGame()
         }
         
         alert.addAction(action)
-        
         self.present(alert, animated: true, completion: nil)
     }
     
